@@ -1,0 +1,132 @@
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEditorInternal;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+public class NavigationHistoryEditor : EditorWindow
+{
+    private List<GameObject> favorites = new List<GameObject>();
+    private ReorderableList favoritesList;
+
+    [MenuItem("Window/Navigation History")]
+    public static void ShowWindow()
+    {
+        EditorWindow.GetWindow(typeof(NavigationHistoryEditor), false, "Navigation History");
+    }
+
+    private void OnEnable()
+    {
+        favoritesList = new ReorderableList(favorites, typeof(GameObject), true, true, true, true);
+        favoritesList.drawHeaderCallback = rect => EditorGUI.LabelField(rect, $"Favorites ({favorites.Count}):");
+        favoritesList.drawElementCallback = (rect, index, isActive, isFocused) =>
+        {
+           
+            
+            GameObject favorite = favorites[index];
+            if(favorite == null)
+            {
+                favorites.RemoveAt(index);
+                return;
+            }
+            EditorGUI.LabelField(rect, favorite.name);
+        };
+        favoritesList.onReorderCallback = list => Repaint();
+        favoritesList.onRemoveCallback = list =>
+        {
+            favorites.RemoveAt(list.index);
+            Repaint();
+        };
+    }
+
+    private void OnGUI()
+    {
+        Event currentEvent = Event.current;
+
+        // Handle dragging and dropping game objects
+        if (currentEvent.type == EventType.DragUpdated)
+        {
+            DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+            currentEvent.Use();
+        }
+        else if (currentEvent.type == EventType.DragPerform)
+        {
+            DragAndDrop.AcceptDrag();
+
+            foreach (Object draggedObject in DragAndDrop.objectReferences)
+            {
+                if (draggedObject is GameObject)
+                {
+                    AddToFavorite((GameObject)draggedObject);
+                }
+            }
+
+            currentEvent.Use();
+        }
+
+        EditorGUILayout.Space();
+
+        EditorGUILayout.BeginScrollView(Vector2.zero, GUILayout.ExpandHeight(true));
+        favoritesList.DoLayoutList();
+        EditorGUILayout.EndScrollView();
+
+        EditorGUILayout.Space();
+
+        if (GUILayout.Button("Reset", GetRedButtonStyle(), GUILayout.Height(30)))
+        {
+            ResetFavorites();
+        }
+    }
+
+    private void AddToFavorite(GameObject selectedGameObject)
+    {
+        if (!favorites.Contains(selectedGameObject))
+        {
+            favorites.Add(selectedGameObject);
+            Debug.Log("Added " + selectedGameObject.name + " to favorites.");
+        }
+    }
+
+    private void ResetFavorites()
+    {
+        favorites.Clear();
+    }
+
+    private void OnSelectionChange()
+    {
+        Repaint(); // Refresh the window when the selection changes
+    }
+
+    private void OnInspectorUpdate()
+    {
+        Repaint(); // Refresh the window when the inspector updates
+    }
+
+    private void OnFocus()
+    {
+        Repaint(); // Refresh the window when the window gains focus
+    }
+
+    private void OnLostFocus()
+    {
+        Repaint(); // Refresh the window when the window loses focus
+    }
+    
+    private GUIStyle GetRedButtonStyle()
+    {
+        GUIStyle redButtonStyle = new GUIStyle(GUI.skin.button);
+        redButtonStyle.normal.textColor = new Color(0.2f, 0.1f, 0.1f, 1f);
+
+        Color[] pixels = new Color[1];
+        pixels[0] = new Color(0.8f, 0.1f, 0.1f, 0.3f);
+
+        Texture2D texture = new Texture2D(1, 1);
+        texture.SetPixels(pixels);
+        texture.Apply();
+
+        redButtonStyle.normal.background = texture;
+
+        return redButtonStyle;
+    }
+
+}

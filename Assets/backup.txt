@@ -1,0 +1,97 @@
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+public class NavigationHistoryEditor : EditorWindow
+{
+    private List<GameObject> favorites = new List<GameObject>();
+
+    [MenuItem("Window/Navigation History")]
+    public static void ShowWindow()
+    {
+        EditorWindow.GetWindow(typeof(NavigationHistoryEditor), false, "Navigation History");
+    }
+
+    private void OnGUI()
+    {
+        Event currentEvent = Event.current;
+
+        // Handle dragging and dropping game objects
+        if (currentEvent.type == EventType.DragUpdated)
+        {
+            DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+            currentEvent.Use();
+        }
+        else if (currentEvent.type == EventType.DragPerform)
+        {
+            DragAndDrop.AcceptDrag();
+
+            foreach (Object draggedObject in DragAndDrop.objectReferences)
+            {
+                if (draggedObject is GameObject)
+                {
+                    AddToFavorite((GameObject)draggedObject);
+                }
+            }
+
+            currentEvent.Use();
+        }
+
+        GUILayout.Label($"Favorites ({favorites.Count}):");
+        if (favorites.Count > 0)
+        {
+            for (int i = 0; i < favorites.Count; i++)
+            {
+                GameObject favorite = favorites[i];
+                if (GUILayout.Button(favorite.name))
+                {
+                    Selection.activeGameObject = favorite;
+                    EditorGUIUtility.PingObject(favorite);
+                }
+            }
+        }
+        else
+        {
+            GUILayout.Label("No favorites found.");
+        }
+
+        GUILayout.FlexibleSpace();
+        
+        if (GUILayout.Button("Reset",GetRedButtonStyle()))
+        {
+            ResetFavorites();
+        }
+    }
+
+    private void AddToFavorite(GameObject selectedGameObject)
+    {
+        if (!favorites.Contains(selectedGameObject))
+        {
+            favorites.Add(selectedGameObject);
+            Debug.Log("Added " + selectedGameObject.name + " to favorites.");
+        }
+    }
+
+    private void ResetFavorites()
+    {
+        favorites.Clear();
+    }
+    
+    private GUIStyle GetRedButtonStyle()
+    {
+        GUIStyle redButtonStyle = new GUIStyle(GUI.skin.button);
+        redButtonStyle.normal.textColor= new Color(0.2f, 0.1f, 0.1f,1f);
+
+        Color[] pixels = new Color[1];
+        pixels[0] = new Color(0.8f, 0.1f, 0.1f,0.3f);
+
+        Texture2D texture = new Texture2D(1, 1);
+        texture.SetPixels(pixels);
+        texture.Apply();
+
+        redButtonStyle.normal.background = texture;
+
+        return redButtonStyle;
+    }
+}
